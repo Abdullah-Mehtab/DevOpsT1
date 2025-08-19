@@ -1,0 +1,41 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    name: CI Pipeline
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install system packages
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y zip tidy
+
+    - name: Run HTML validator (tidy)
+      run: |
+        tidy -errors public/index.html || true
+        tidy -qe public/index.html
+
+    - name: Run custom checks
+      run: |
+        ./ci-scripts/check_index.sh
+
+    - name: Build deployment package
+      run: |
+        mkdir -p build
+        cp -r public build/
+        cd build
+        zip -r ../deploy.zip .
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: deploy-artifact
+        path: deploy.zip
