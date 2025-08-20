@@ -1,0 +1,13 @@
+[Unit]
+Description=Python App
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/pythonapp
+Environment="PATH=/var/www/pythonapp/venv/bin"
+ExecStart=/var/www/pythonapp/venv/bin/python app.py
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.env
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dist/
+build/
+
+# WordPress
+wp-config.php
+# Ignore core WordPress files, we only need our theme/plugin if we customise later
+wp-admin/
+wp-includes/
+# Ignore uploads
+wp-content/uploads/
+
+# System
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Secrets
+*.env
+*.key
+*.cert
+
+# Logs
+*.log
+logs/
+
+# CI/CD artifacts (we will create these during the pipeline)
+*.zip
+*.tar.gz

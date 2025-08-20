@@ -1,0 +1,132 @@
+user www-data;
+worker_processes auto;
+pid /run/nginx.pid;
+include /etc/nginx/modules-enabled/*.conf;
+
+events {
+    worker_connections 768;
+    # multi_accept on;
+}
+
+http {
+
+    ##
+    # Basic Settings
+    ##
+
+    sendfile on;
+    tcp_nopush on;
+    types_hash_max_size 2048;
+    # server_tokens off;
+
+    # server_names_hash_bucket_size 64;
+    # server_name_in_redirect off;
+
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    ##
+    # SSL Settings
+    ##
+
+    ssl_protocols TLSv1 TLSv1.1 TLSv1.2 TLSv1.3; # Dropping SSLv3, ref: POODLE
+    ssl_prefer_server_ciphers on;
+
+    ##
+    # Logging Settings
+    ##
+
+    access_log /var/log/nginx/access.log;
+    error_log /var/log/nginx/error.log;
+
+    ##
+    # Gzip Settings
+    ##
+
+    gzip on;
+
+    # gzip_vary on;
+    # gzip_proxied any;
+    # gzip_comp_level 6;
+    # gzip_buffers 16 8k;
+    # gzip_http_version 1.1;
+    # gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+
+    ##
+    # Updated Server Blocks
+    ##
+
+    # WordPress server block (port 80)
+    server {
+        listen 80 default_server;
+        listen [::]:80 default_server;
+
+        server_name localhost;
+
+        # WordPress root
+        root /var/www/wordpress;
+        index index.php index.html index.htm;
+
+        location / {
+            try_files $uri $uri/ /index.php?$args;
+        }
+
+        # React application - under /react path
+        location /react {
+            alias /var/www/reactapp/dist;
+            index index.html index.htm;
+            try_files $uri $uri/ /react/index.html;
+
+            # Add these headers to prevent WordPress from interfering
+            add_header X-Content-Type-Options nosniff;
+            add_header X-Frame-Options SAMEORIGIN;
+        }
+
+        location ~ \.php$ {
+            include snippets/fastcgi-php.conf;
+            fastcgi_pass unix:/var/run/php/php8.1-fpm.sock;
+        }
+
+        location ~ /\.ht {
+            deny all;
+        }
+    }
+
+    # Original HTML server block (port 6969)
+    server {
+        listen 6969;
+        listen [::]:6969;
+
+        server_name localhost;
+
+        # Original HTML root
+        root /var/www/devopst1;
+        index index.html index.htm;
+
+        location / {
+            try_files $uri $uri/ =404;
+        }
+    }
+
+    # =====================
+    # React application block removed (now served under /react in port 80 server)
+    # =====================
+
+    # =====================
+    # Python/Flask app (kept from old config)
+    # =====================
+    server {
+        listen 5000;
+        listen [::]:5000;
+
+        server_name localhost;
+
+        location / {
+            proxy_pass http://127.0.0.1:5000;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+}
