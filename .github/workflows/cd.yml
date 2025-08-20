@@ -13,11 +13,9 @@ jobs:
 
     env:
       DEPLOY_DIR: /var/www/devopst1
-      ARTIFACT_NAME: deploy-artifact
-      ARTIFACT_FILE: deploy.zip
 
     steps:
-    - name: Checkout
+    - name: Checkout current repository
       uses: actions/checkout@v4
 
     - name: Wait for previous workflow success
@@ -26,32 +24,50 @@ jobs:
         echo "Upstream workflow did not succeed. Exiting."
         exit 1
 
-    - name: Download artifact from CI
-      uses: actions/download-artifact@v4
+    - name: Download artifact from CI workflow
+      uses: actions/github-script@v6
       with:
-        name: ${{ env.ARTIFACT_NAME }}
-        path: ./artifact
-        run-id: ${{ github.event.workflow_run.id }}  # Critical fix
+        script: |
+          // Get artifacts from the triggering workflow run
+          const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            run_id: context.payload.workflow_run.id,
+          });
+          
+          // Find the deploy-artifact
+          const artifact = artifacts.data.artifacts.find(a => a.name === 'deploy-artifact');
+          if (!artifact) {
+            throw new Error('Artifact not found');
+          }
+          
+          // Download the artifact
+          const download = await github.rest.actions.downloadArtifact({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            artifact_id: artifact.id,
+            archive_format: 'zip',
+          });
+          
+          // Write the artifact to disk
+          const fs = require('fs').promises;
+          await fs.writeFile('deploy.zip', Buffer.from(download.data));
+          
+          return 'Artifact downloaded successfully';
 
-    - name: Inspect artifact
+    - name: Extract artifact
       run: |
-        ls -lah artifact
-        file artifact/${{ env.ARTIFACT_FILE }}
+        unzip -o deploy.zip -d /tmp/deploy_temp
 
-    - name: Unpack and deploy
+    - name: Deploy to nginx
       run: |
         sudo mkdir -p $DEPLOY_DIR
-        sudo chown -R $USER:$USER $DEPLOY_DIR
-        unzip -o artifact/${{ env.ARTIFACT_FILE }} -d /tmp/deploy_temp
         sudo cp -r /tmp/deploy_temp/* $DEPLOY_DIR/
         sudo chown -R www-data:www-data $DEPLOY_DIR
-
-    - name: Deploy nginx config and reload
-      run: |
         sudo nginx -t
         sudo systemctl restart nginx
 
-    - name: Verify with curl
+    - name: Verify deployment
       run: |
-        sleep 1
+        sleep 2
         curl -f http://localhost/ || (curl -v http://localhost/ && exit 1)
