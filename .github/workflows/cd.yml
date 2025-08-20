@@ -9,7 +9,6 @@ on:
 
 jobs:
   deploy:
-    # Only run if the CI pipeline succeeded and is from the main branch
     if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' }}
     name: CD on self-hosted
     runs-on: [self-hosted, linux, x64]
@@ -21,7 +20,6 @@ jobs:
     - name: Check workflow context
       run: |
         echo "Workflow Run ID: ${{ github.event.workflow_run.id }}"
-        echo "Conclusion: ${{ github.event.workflow_run.conclusion }}"
         echo "Head Branch: ${{ github.event.workflow_run.head_branch }}"
 
     - name: Download artifact from CI
@@ -36,16 +34,16 @@ jobs:
       run: |
         if [ ! -f "./artifact/deploy.zip" ]; then
           echo "Error: Artifact not found!"
-          echo "Contents of artifact directory:"
           ls -la ./artifact/
           exit 1
         fi
         echo "Artifact found and verified."
 
-    - name: Create extraction directory
+    - name: Prepare extraction directory
       run: |
-        # Create a directory in the workspace for extraction
+        # Create extraction directory with proper permissions
         mkdir -p ./deploy_extract
+        chmod 755 ./deploy_extract
 
     - name: Extract artifact
       run: |
@@ -55,28 +53,32 @@ jobs:
         # Verify extraction
         if [ ! -d "./deploy_extract/public" ]; then
           echo "Error: Extraction failed or wrong structure!"
-          echo "Contents of extract directory:"
           ls -la "./deploy_extract/"
           exit 1
         fi
         echo "Artifact extracted successfully."
 
-    - name: Deploy to production
+    - name: Prepare deployment directory
       run: |
-        # Ensure deployment directory exists
+        # Ensure deployment directory exists with correct permissions
         sudo mkdir -p "$DEPLOY_DIR"
-        
-        # Copy files to deployment directory
-        sudo cp -r "./deploy_extract/public/"* "$DEPLOY_DIR/"
-        
-        # Set proper permissions
-        sudo chown -R www-data:www-data "$DEPLOY_DIR"
+        sudo chown -R $USER:$USER "$DEPLOY_DIR"
         sudo chmod -R 755 "$DEPLOY_DIR"
+
+    - name: Copy files to deployment directory
+      run: |
+        # Copy files without sudo (we changed ownership above)
+        cp -r "./deploy_extract/public/"* "$DEPLOY_DIR/"
         
-        # Test nginx configuration
+        # Restore proper ownership for web server
+        sudo chown -R www-data:www-data "$DEPLOY_DIR"
+
+    - name: Test nginx configuration
+      run: |
         sudo nginx -t
-        
-        # Restart nginx
+
+    - name: Restart nginx
+      run: |
         sudo systemctl restart nginx
 
     - name: Verify deployment
