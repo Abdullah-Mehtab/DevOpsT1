@@ -5,9 +5,12 @@ on:
     workflows: ["CI Pipeline"]
     types:
       - completed
+    branches: [main]
 
 jobs:
   deploy:
+    # Only run if the CI pipeline succeeded and is from the main branch
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' }}
     name: CD on self-hosted
     runs-on: [self-hosted, linux, x64]
 
@@ -15,14 +18,11 @@ jobs:
       DEPLOY_DIR: /var/www/devopst1
 
     steps:
-    - name: Checkout current repository
-      uses: actions/checkout@v4
-
-    - name: Wait for previous workflow success
-      if: ${{ github.event.workflow_run.conclusion != 'success' }}
+    - name: Check workflow context
       run: |
-        echo "Upstream workflow did not succeed. Exiting."
-        exit 1
+        echo "Workflow Run ID: ${{ github.event.workflow_run.id }}"
+        echo "Conclusion: ${{ github.event.workflow_run.conclusion }}"
+        echo "Head Branch: ${{ github.event.workflow_run.head_branch }}"
 
     - name: Download artifact from CI
       uses: actions/download-artifact@v4
@@ -32,25 +32,74 @@ jobs:
         github-token: ${{ secrets.PAT }}
         run-id: ${{ github.event.workflow_run.id }}
 
-    - name: List downloaded files
+    - name: Verify artifact
       run: |
-        ls -la ./artifact
+        if [ ! -f "./artifact/deploy.zip" ]; then
+          echo "Error: Artifact not found!"
+          echo "Contents of artifact directory:"
+          ls -la ./artifact/
+          exit 1
+        fi
+        echo "Artifact found and verified."
 
-    - name: Extract and deploy
+    - name: Create extraction directory
       run: |
-        # Extract the artifact
-        unzip -o ./artifact/deploy.zip -d /tmp/deploy_temp
+        # Create a directory in the workspace for extraction
+        mkdir -p ./deploy_extract
+
+    - name: Extract artifact
+      run: |
+        # Extract artifact to workspace directory
+        unzip -o "./artifact/deploy.zip" -d "./deploy_extract"
         
-        # Deploy to nginx directory
-        sudo mkdir -p $DEPLOY_DIR
-        sudo cp -r /tmp/deploy_temp/public/* $DEPLOY_DIR/
-        sudo chown -R www-data:www-data $DEPLOY_DIR
+        # Verify extraction
+        if [ ! -d "./deploy_extract/public" ]; then
+          echo "Error: Extraction failed or wrong structure!"
+          echo "Contents of extract directory:"
+          ls -la "./deploy_extract/"
+          exit 1
+        fi
+        echo "Artifact extracted successfully."
+
+    - name: Deploy to production
+      run: |
+        # Ensure deployment directory exists
+        sudo mkdir -p "$DEPLOY_DIR"
         
-        # Test and restart nginx
+        # Copy files to deployment directory
+        sudo cp -r "./deploy_extract/public/"* "$DEPLOY_DIR/"
+        
+        # Set proper permissions
+        sudo chown -R www-data:www-data "$DEPLOY_DIR"
+        sudo chmod -R 755 "$DEPLOY_DIR"
+        
+        # Test nginx configuration
         sudo nginx -t
+        
+        # Restart nginx
         sudo systemctl restart nginx
 
     - name: Verify deployment
       run: |
-        sleep 2
-        curl -f http://localhost/ || (curl -v http://localhost/ && exit 1)
+        # Wait for nginx to start
+        sleep 5
+        
+        # Test the deployment
+        if curl -f http://localhost/; then
+          echo "Deployment successful!"
+          echo "Content deployed:"
+          curl -s http://localhost/ | tail -3
+        else
+          echo "Deployment failed! Checking nginx status..."
+          sudo systemctl status nginx --no-pager
+          echo "Checking port 80:"
+          sudo netstat -tlnp | grep :80 || true
+          echo "Full curl output:"
+          curl -v http://localhost/ || exit 1
+        fi
+
+    - name: Cleanup
+      run: |
+        rm -rf ./deploy_extract
+        rm -rf ./artifact
+        echo "Cleanup completed."
