@@ -57,34 +57,45 @@ jobs:
 
     - name: Prepare deployment directory
       run: |
+        # Ensure deployment directory exists with correct permissions
         sudo mkdir -p "$DEPLOY_DIR"
         sudo chown -R $USER:$USER "$DEPLOY_DIR"
         sudo chmod -R 755 "$DEPLOY_DIR"
 
     - name: Copy files to deployment directory
       run: |
+        # Copy files without sudo (we changed ownership above)
         cp -r "./deploy_extract/public/"* "$DEPLOY_DIR/"
         
-        # Change ownership to www-data
+        # Restore proper ownership for web server
         sudo chown -R www-data:www-data "$DEPLOY_DIR"
 
     - name: Test nginx configuration
       run: |
-        sudo nginx -t
+        # Use sudo with the -n (non-interactive) flag
+        sudo -n nginx -t
 
     - name: Restart nginx
       run: |
-        sudo systemctl restart nginx
+        # Use sudo with the -n (non-interactive) flag
+        sudo -n systemctl restart nginx
 
     - name: Verify deployment
       run: |
+        # Wait for nginx to start
         sleep 5
+        
+        # Test the deployment
         if curl -f http://localhost/; then
           echo "Deployment successful!"
+          echo "Content deployed:"
           curl -s http://localhost/ | tail -3
         else
-          echo "Deployment failed!"
-          sudo systemctl status nginx --no-pager
+          echo "Deployment failed! Checking nginx status..."
+          sudo -n systemctl status nginx --no-pager
+          echo "Checking port 80:"
+          sudo -n netstat -tlnp | grep :80 || true
+          echo "Full curl output:"
           curl -v http://localhost/ || exit 1
         fi
 
@@ -92,3 +103,4 @@ jobs:
       run: |
         rm -rf ./deploy_extract
         rm -rf ./artifact
+        echo "Cleanup completed."
