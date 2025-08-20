@@ -10,64 +10,66 @@ jobs:
   deploy:
     name: CD on self-hosted
     runs-on: [self-hosted, linux, x64]
+    timeout-minutes: 30
 
     env:
       DEPLOY_DIR: /var/www/devopst1
+      ARTIFACT_NAME: deploy-artifact
+      ARTIFACT_FILE: deploy.zip
 
     steps:
-    - name: Checkout current repository
-      uses: actions/checkout@v4
+      - name: Checkout current repo
+        uses: actions/checkout@v4
 
-    - name: Wait for previous workflow success
-      if: ${{ github.event.workflow_run.conclusion != 'success' }}
-      run: |
-        echo "Upstream workflow did not succeed. Exiting."
-        exit 1
+      - name: Ensure upstream CI succeeded
+        if: ${{ github.event.workflow_run.conclusion != 'success' }}
+        run: |
+          echo "Upstream workflow did not succeed. Exiting."
+          exit 1
 
-    - name: Download artifact from CI workflow
-      uses: actions/github-script@v6
-      with:
-        script: |
-          // Get artifacts from the triggering workflow run
-          const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            run_id: context.payload.workflow_run.id,
-          });
-          
-          // Find the deploy-artifact
-          const artifact = artifacts.data.artifacts.find(a => a.name === 'deploy-artifact');
-          if (!artifact) {
-            throw new Error('Artifact not found');
-          }
-          
-          // Download the artifact
-          const download = await github.rest.actions.downloadArtifact({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            artifact_id: artifact.id,
-            archive_format: 'zip',
-          });
-          
-          // Write the artifact to disk
-          const fs = require('fs').promises;
-          await fs.writeFile('deploy.zip', Buffer.from(download.data));
-          
-          return 'Artifact downloaded successfully';
+      - name: Download artifact from CI run
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ./artifact
+          run-id: ${{ github.event.workflow_run.id }}
 
-    - name: Extract artifact
-      run: |
-        unzip -o deploy.zip -d /tmp/deploy_temp
+      - name: Inspect downloaded artifact
+        run: |
+          ls -lah artifact || true
+          file artifact/${{ env.ARTIFACT_FILE }} || true
 
-    - name: Deploy to nginx
-      run: |
-        sudo mkdir -p $DEPLOY_DIR
-        sudo cp -r /tmp/deploy_temp/* $DEPLOY_DIR/
-        sudo chown -R www-data:www-data $DEPLOY_DIR
-        sudo nginx -t
-        sudo systemctl restart nginx
+      - name: Prepare runner-owned temp dir and extract artifact
+        run: |
+          echo "RUNNER_TEMP=${RUNNER_TEMP:-/tmp/runner_temp}"
+          TMP_DIR="${RUNNER_TEMP:-/tmp/runner_temp}/deploy_temp"
+          rm -rf "$TMP_DIR"
+          mkdir -p "$TMP_DIR"
+          unzip -o artifact/${{ env.ARTIFACT_FILE }} -d "$TMP_DIR"
+          echo "Contents of $TMP_DIR:"
+          ls -lah "$TMP_DIR"
 
-    - name: Verify deployment
-      run: |
-        sleep 2
-        curl -f http://localhost/ || (curl -v http://localhost/ && exit 1)
+      - name: Deploy to $DEPLOY_DIR (atomic via rsync)
+        run: |
+          # create target dir (requires sudo)
+          sudo mkdir -p $DEPLOY_DIR
+          # copy contents from runner temp to target atomically and preserve ownership where possible
+          sudo rsync -a --delete "${RUNNER_TEMP:-/tmp/runner_temp}/deploy_temp/" "$DEPLOY_DIR/"
+          # set correct web user ownership
+          sudo chown -R www-data:www-data $DEPLOY_DIR
+          # ensure perms are sane
+          sudo find $DEPLOY_DIR -type d -exec chmod 755 {} \;
+          sudo find $DEPLOY_DIR -type f -exec chmod 644 {} \;
+          # test nginx config and reload
+          sudo nginx -t
+          sudo systemctl restart nginx
+
+      - name: Verify deployment (simple HTTP check)
+        run: |
+          sleep 2
+          curl -f http://localhost/ || (curl -v http://localhost/ && exit 1)
+
+      - name: Cleanup runner temp
+        if: always()
+        run: |
+          rm -rf "${RUNNER_TEMP:-/tmp/runner_temp}/deploy_temp"
