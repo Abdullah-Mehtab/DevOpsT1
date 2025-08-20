@@ -8,7 +8,6 @@ on:
 
 jobs:
   deploy:
-    # Only run if the CI pipeline succeeded
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     name: CD on self-hosted
     runs-on: [self-hosted, linux, x64]
@@ -17,109 +16,58 @@ jobs:
       DEPLOY_DIR: /var/www/devopst1
 
     steps:
-    - name: Check system dependencies
-      run: |
-        which unzip || sudo apt-get update && sudo apt-get install -y unzip
-        which curl || sudo apt-get install -y curl
-        which nginx || sudo apt-get install -y nginx
-
-    - name: Download artifact from CI workflow
+    - name: Download artifact from CI
       uses: actions/download-artifact@v4
-      env:
-        GITHUB_TOKEN: ${{ secrets.PAT }}  # Ensure you have a PAT secret with repo scope
       with:
         name: deploy-artifact
-        path: ./
+        path: ./artifact
+        github-token: ${{ secrets.PAT }}
         run-id: ${{ github.event.workflow_run.id }}
 
-    - name: Verify artifact integrity
+    - name: Verify and extract artifact
       run: |
-        if [ ! -f deploy.zip ]; then
-          echo "Error: Artifact file not found!"
+        # Check if artifact exists
+        if [ ! -f "./artifact/deploy.zip" ]; then
+          echo "Error: Artifact not found!"
+          ls -la ./artifact/
           exit 1
         fi
-        
-        if ! unzip -t deploy.zip >/dev/null 2>&1; then
-          echo "Error: Artifact is corrupted or invalid!"
-          exit 1
-        fi
-
-    - name: Create backup of current deployment
-      run: |
-        if [ -d "$DEPLOY_DIR" ]; then
-          backup_dir="/var/www/backups/$(date +'%Y%m%d_%H%M%S')"
-          sudo mkdir -p /var/www/backups
-          sudo cp -r "$DEPLOY_DIR" "$backup_dir"
-          echo "Backup created at: $backup_dir"
-        fi
-
-    - name: Extract and deploy artifact
-      run: |
-        # Create temporary extraction directory
-        temp_dir=$(mktemp -d)
         
         # Extract artifact
-        unzip -o deploy.zip -d "$temp_dir"
+        unzip -o ./artifact/deploy.zip -d /tmp/deploy_temp
         
-        # Ensure target directory exists
-        sudo mkdir -p "$DEPLOY_DIR"
+        # Verify extraction
+        if [ ! -d "/tmp/deploy_temp/public" ]; then
+          echo "Error: Extraction failed or wrong structure!"
+          ls -la /tmp/deploy_temp/
+          exit 1
+        fi
+
+    - name: Deploy to production
+      run: |
+        # Copy files to deployment directory
+        sudo cp -r /tmp/deploy_temp/public/* "$DEPLOY_DIR/"
         
-        # Copy files with proper permissions (using rsync for atomic deployment)
-        sudo rsync -a --delete "$temp_dir/build/public/" "$DEPLOY_DIR/"
-        
-        # Set ownership (adjust if your web server uses a different user)
+        # Set proper permissions
         sudo chown -R www-data:www-data "$DEPLOY_DIR"
         sudo chmod -R 755 "$DEPLOY_DIR"
         
-        # Cleanup temporary directory
-        rm -rf "$temp_dir"
-
-    - name: Test nginx configuration
-      run: |
-        if ! sudo nginx -t; then
-          echo "Error: Nginx configuration test failed!"
-          exit 1
-        fi
-
-    - name: Restart nginx gracefully
-      run: |
-        # Try to reload first (graceful)
-        if sudo systemctl reload nginx; then
-          echo "Nginx reloaded successfully"
-        else
-          echo "Reload failed, attempting full restart"
-          sudo systemctl restart nginx
-        fi
+        # Test nginx configuration
+        sudo nginx -t
+        
+        # Restart nginx
+        sudo systemctl restart nginx
 
     - name: Verify deployment
       run: |
-        # Wait for nginx to fully start
+        # Wait for nginx to start
         sleep 3
         
-        # Try multiple verification methods
+        # Test the deployment
         if curl -f http://localhost/; then
-          echo "Deployment verified successfully via curl"
+          echo "Deployment successful!"
         else
-          # Check if nginx is running
-          if ! systemctl is-active --quiet nginx; then
-            echo "Error: Nginx is not running!"
-            sudo systemctl status nginx
-            exit 1
-          fi
-          
-          # Check for port listening
-          if ! ss -tln | grep ':80 '; then
-            echo "Error: Nothing listening on port 80!"
-            exit 1
-          fi
-          
-          # Final attempt with verbose output
-          curl -v http://localhost/ || exit 1
-        fi
-
-    - name: Cleanup old backups
-      run: |
-        # Keep only the last 5 backups
-        if [ -d "/var/www/backups" ]; then
-          ls -dt /var/www/backups/* | tail -n +6 | xargs sudo rm -rf || true
+          echo "Deployment failed!"
+          curl -v http://localhost/
+          exit 1
         fi
