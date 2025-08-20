@@ -8,68 +8,118 @@ on:
 
 jobs:
   deploy:
+    # Only run if the CI pipeline succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     name: CD on self-hosted
     runs-on: [self-hosted, linux, x64]
-    timeout-minutes: 30
 
     env:
       DEPLOY_DIR: /var/www/devopst1
-      ARTIFACT_NAME: deploy-artifact
-      ARTIFACT_FILE: deploy.zip
 
     steps:
-      - name: Checkout current repo
-        uses: actions/checkout@v4
+    - name: Check system dependencies
+      run: |
+        which unzip || sudo apt-get update && sudo apt-get install -y unzip
+        which curl || sudo apt-get install -y curl
+        which nginx || sudo apt-get install -y nginx
 
-      - name: Ensure upstream CI succeeded
-        if: ${{ github.event.workflow_run.conclusion != 'success' }}
-        run: |
-          echo "Upstream workflow did not succeed. Exiting."
+    - name: Download artifact from CI workflow
+      uses: actions/download-artifact@v4
+      env:
+        GITHUB_TOKEN: ${{ secrets.PAT }}  # Ensure you have a PAT secret with repo scope
+      with:
+        name: deploy-artifact
+        path: ./
+        run-id: ${{ github.event.workflow_run.id }}
+
+    - name: Verify artifact integrity
+      run: |
+        if [ ! -f deploy.zip ]; then
+          echo "Error: Artifact file not found!"
           exit 1
+        fi
+        
+        if ! unzip -t deploy.zip >/dev/null 2>&1; then
+          echo "Error: Artifact is corrupted or invalid!"
+          exit 1
+        fi
 
-      - name: Download artifact from CI run
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ env.ARTIFACT_NAME }}
-          path: ./artifact
-          run-id: ${{ github.event.workflow_run.id }}
+    - name: Create backup of current deployment
+      run: |
+        if [ -d "$DEPLOY_DIR" ]; then
+          backup_dir="/var/www/backups/$(date +'%Y%m%d_%H%M%S')"
+          sudo mkdir -p /var/www/backups
+          sudo cp -r "$DEPLOY_DIR" "$backup_dir"
+          echo "Backup created at: $backup_dir"
+        fi
 
-      - name: Inspect downloaded artifact
-        run: |
-          ls -lah artifact || true
-          file artifact/${{ env.ARTIFACT_FILE }} || true
+    - name: Extract and deploy artifact
+      run: |
+        # Create temporary extraction directory
+        temp_dir=$(mktemp -d)
+        
+        # Extract artifact
+        unzip -o deploy.zip -d "$temp_dir"
+        
+        # Ensure target directory exists
+        sudo mkdir -p "$DEPLOY_DIR"
+        
+        # Copy files with proper permissions (using rsync for atomic deployment)
+        sudo rsync -a --delete "$temp_dir/build/public/" "$DEPLOY_DIR/"
+        
+        # Set ownership (adjust if your web server uses a different user)
+        sudo chown -R www-data:www-data "$DEPLOY_DIR"
+        sudo chmod -R 755 "$DEPLOY_DIR"
+        
+        # Cleanup temporary directory
+        rm -rf "$temp_dir"
 
-      - name: Prepare runner-owned temp dir and extract artifact
-        run: |
-          echo "RUNNER_TEMP=${RUNNER_TEMP:-/tmp/runner_temp}"
-          TMP_DIR="${RUNNER_TEMP:-/tmp/runner_temp}/deploy_temp"
-          rm -rf "$TMP_DIR"
-          mkdir -p "$TMP_DIR"
-          unzip -o artifact/${{ env.ARTIFACT_FILE }} -d "$TMP_DIR"
-          echo "Contents of $TMP_DIR:"
-          ls -lah "$TMP_DIR"
+    - name: Test nginx configuration
+      run: |
+        if ! sudo nginx -t; then
+          echo "Error: Nginx configuration test failed!"
+          exit 1
+        fi
 
-      - name: Deploy to $DEPLOY_DIR (atomic via rsync)
-        run: |
-          # create target dir (requires sudo)
-          sudo mkdir -p $DEPLOY_DIR
-          # copy contents from runner temp to target atomically and preserve ownership where possible
-          sudo rsync -a --delete "${RUNNER_TEMP:-/tmp/runner_temp}/deploy_temp/" "$DEPLOY_DIR/"
-          # set correct web user ownership
-          sudo chown -R www-data:www-data $DEPLOY_DIR
-          # ensure perms are sane
-          sudo find $DEPLOY_DIR -type d -exec chmod 755 {} \;
-          sudo find $DEPLOY_DIR -type f -exec chmod 644 {} \;
-          # test nginx config and reload
-          sudo nginx -t
+    - name: Restart nginx gracefully
+      run: |
+        # Try to reload first (graceful)
+        if sudo systemctl reload nginx; then
+          echo "Nginx reloaded successfully"
+        else
+          echo "Reload failed, attempting full restart"
           sudo systemctl restart nginx
+        fi
 
-      - name: Verify deployment (simple HTTP check)
-        run: |
-          sleep 2
-          curl -f http://localhost/ || (curl -v http://localhost/ && exit 1)
+    - name: Verify deployment
+      run: |
+        # Wait for nginx to fully start
+        sleep 3
+        
+        # Try multiple verification methods
+        if curl -f http://localhost/; then
+          echo "Deployment verified successfully via curl"
+        else
+          # Check if nginx is running
+          if ! systemctl is-active --quiet nginx; then
+            echo "Error: Nginx is not running!"
+            sudo systemctl status nginx
+            exit 1
+          fi
+          
+          # Check for port listening
+          if ! ss -tln | grep ':80 '; then
+            echo "Error: Nothing listening on port 80!"
+            exit 1
+          fi
+          
+          # Final attempt with verbose output
+          curl -v http://localhost/ || exit 1
+        fi
 
-      - name: Cleanup runner temp
-        if: always()
-        run: |
-          rm -rf "${RUNNER_TEMP:-/tmp/runner_temp}/deploy_temp"
+    - name: Cleanup old backups
+      run: |
+        # Keep only the last 5 backups
+        if [ -d "/var/www/backups" ]; then
+          ls -dt /var/www/backups/* | tail -n +6 | xargs sudo rm -rf || true
+        fi
