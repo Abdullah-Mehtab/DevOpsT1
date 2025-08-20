@@ -8,99 +8,127 @@ on:
     branches: [main]
 
 jobs:
-  deploy:
+  deploy-to-ubuntu:
     if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' }}
-    name: CD on self-hosted
+    name: Deploy to Ubuntu Server
     runs-on: [self-hosted, linux, x64]
-
     env:
       DEPLOY_DIR: /var/www/devopst1
-
     steps:
-    - name: Check workflow context
-      run: |
-        echo "Workflow Run ID: ${{ github.event.workflow_run.id }}"
-        echo "Head Branch: ${{ github.event.workflow_run.head_branch }}"
+      - name: Check workflow context
+        run: |
+          echo "Workflow Run ID: ${{ github.event.workflow_run.id }}"
+          echo "Head Branch: ${{ github.event.workflow_run.head_branch }}"
 
-    - name: Download artifact from CI
-      uses: actions/download-artifact@v4
-      with:
-        name: deploy-artifact
-        path: ./artifact
-        github-token: ${{ secrets.PAT }}
-        run-id: ${{ github.event.workflow_run.id }}
+      - name: Download artifact from CI
+        uses: actions/download-artifact@v4
+        with:
+          name: deploy-artifact
+          path: ./artifact
+          github-token: ${{ secrets.PAT }}
+          run-id: ${{ github.event.workflow_run.id }}
 
-    - name: Verify artifact
-      run: |
-        if [ ! -f "./artifact/deploy.zip" ]; then
-          echo "Error: Artifact not found!"
-          ls -la ./artifact/
-          exit 1
-        fi
-        echo "Artifact found and verified."
+      - name: Verify artifact
+        run: |
+          if [ ! -f "./artifact/deploy.zip" ]; then
+            echo "Error: Artifact not found!"
+            ls -la ./artifact/
+            exit 1
+          fi
+          echo "Artifact found and verified."
 
-    - name: Prepare extraction directory
-      run: |
-        mkdir -p ./deploy_extract
-        chmod 755 ./deploy_extract
+      - name: Prepare extraction directory
+        run: |
+          mkdir -p ./deploy_extract
+          chmod 755 ./deploy_extract
 
-    - name: Extract artifact
-      run: |
-        unzip -o "./artifact/deploy.zip" -d "./deploy_extract"
-        
-        if [ ! -d "./deploy_extract/public" ]; then
-          echo "Error: Extraction failed or wrong structure!"
-          ls -la "./deploy_extract/"
-          exit 1
-        fi
-        echo "Artifact extracted successfully."
+      - name: Extract artifact
+        run: |
+          unzip -o "./artifact/deploy.zip" -d "./deploy_extract"
+          
+          if [ ! -d "./deploy_extract/public" ]; then
+            echo "Error: Extraction failed or wrong structure!"
+            ls -la "./deploy_extract/"
+            exit 1
+          fi
+          echo "Artifact extracted successfully."
 
-    - name: Prepare deployment directory
-      run: |
-        # Ensure deployment directory exists with correct permissions
-        sudo mkdir -p "$DEPLOY_DIR"
-        sudo chown -R $USER:$USER "$DEPLOY_DIR"
-        sudo chmod -R 755 "$DEPLOY_DIR"
+      - name: Prepare deployment directory
+        run: |
+          sudo mkdir -p "$DEPLOY_DIR"
+          sudo chown -R $USER:$USER "$DEPLOY_DIR"
+          sudo chmod -R 755 "$DEPLOY_DIR"
 
-    - name: Copy files to deployment directory
-      run: |
-        # Copy files without sudo (we changed ownership above)
-        cp -r "./deploy_extract/public/"* "$DEPLOY_DIR/"
-        
-        # Restore proper ownership for web server
-        sudo chown -R www-data:www-data "$DEPLOY_DIR"
+      - name: Copy files to deployment directory
+        run: |
+          cp -r "./deploy_extract/public/"* "$DEPLOY_DIR/"
+          sudo chown -R www-data:www-data "$DEPLOY_DIR"
 
-    - name: Test nginx configuration
-      run: |
-        # Use sudo with the -n (non-interactive) flag
-        sudo -n nginx -t
+      - name: Test nginx configuration
+        run: |
+          sudo -n nginx -t
 
-    - name: Restart nginx
-      run: |
-        # Use sudo with the -n (non-interactive) flag
-        sudo -n systemctl restart nginx
+      - name: Restart nginx
+        run: |
+          sudo -n systemctl restart nginx
 
-    - name: Verify deployment
-      run: |
-        # Wait for nginx to start
-        sleep 5
-        
-        # Test the deployment
-        if curl -f http://localhost/; then
-          echo "Deployment successful!"
-          echo "Content deployed:"
-          curl -s http://localhost/ | tail -3
-        else
-          echo "Deployment failed! Checking nginx status..."
-          sudo -n systemctl status nginx --no-pager
-          echo "Checking port 80:"
-          sudo -n netstat -tlnp | grep :80 || true
-          echo "Full curl output:"
-          curl -v http://localhost/ || exit 1
-        fi
+      - name: Verify deployment
+        run: |
+          sleep 5
+          if curl -f http://localhost/; then
+            echo "Deployment successful!"
+            curl -s http://localhost/ | tail -3
+          else
+            echo "Deployment failed! Checking nginx status..."
+            sudo -n systemctl status nginx --no-pager
+            sudo -n netstat -tlnp | grep :80 || true
+            curl -v http://localhost/ || exit 1
+          fi
 
-    - name: Cleanup
-      run: |
-        rm -rf ./deploy_extract
-        rm -rf ./artifact
-        echo "Cleanup completed."
+      - name: Cleanup
+        run: |
+          rm -rf ./deploy_extract
+          rm -rf ./artifact
+          echo "Cleanup completed."
+
+  deploy-to-gh-pages:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' }}
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifact from CI
+        uses: actions/download-artifact@v4
+        with:
+          name: deploy-artifact
+          path: ./artifact
+          github-token: ${{ secrets.PAT }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Verify artifact
+        run: |
+          if [ ! -f "./artifact/deploy.zip" ]; then
+            echo "Error: Artifact not found!"
+            ls -la ./artifact/
+            exit 1
+          fi
+          echo "Artifact found and verified."
+
+      - name: Extract artifact
+        run: |
+          unzip -o "./artifact/deploy.zip" -d "./gh-pages-content"
+          if [ ! -d "./gh-pages-content/public" ]; then
+            echo "Error: Extraction failed or wrong structure!"
+            ls -la "./gh-pages-content/"
+            exit 1
+          fi
+          echo "Artifact extracted successfully."
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./gh-pages-content/public
+
+      - name: Cleanup
+        run: |
+          rm -rf ./artifact ./gh-pages-content
