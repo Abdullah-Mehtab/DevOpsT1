@@ -41,16 +41,13 @@ jobs:
 
     - name: Prepare extraction directory
       run: |
-        # Create extraction directory with proper permissions
         mkdir -p ./deploy_extract
         chmod 755 ./deploy_extract
 
     - name: Extract artifact
       run: |
-        # Extract artifact to workspace directory
         unzip -o "./artifact/deploy.zip" -d "./deploy_extract"
         
-        # Verify extraction
         if [ ! -d "./deploy_extract/public" ]; then
           echo "Error: Extraction failed or wrong structure!"
           ls -la "./deploy_extract/"
@@ -60,17 +57,15 @@ jobs:
 
     - name: Prepare deployment directory
       run: |
-        # Ensure deployment directory exists with correct permissions
         sudo mkdir -p "$DEPLOY_DIR"
         sudo chown -R $USER:$USER "$DEPLOY_DIR"
         sudo chmod -R 755 "$DEPLOY_DIR"
 
     - name: Copy files to deployment directory
       run: |
-        # Copy files without sudo (we changed ownership above)
         cp -r "./deploy_extract/public/"* "$DEPLOY_DIR/"
         
-        # Restore proper ownership for web server
+        # Change ownership to www-data
         sudo chown -R www-data:www-data "$DEPLOY_DIR"
 
     - name: Test nginx configuration
@@ -83,20 +78,13 @@ jobs:
 
     - name: Verify deployment
       run: |
-        # Wait for nginx to start
         sleep 5
-        
-        # Test the deployment
         if curl -f http://localhost/; then
           echo "Deployment successful!"
-          echo "Content deployed:"
           curl -s http://localhost/ | tail -3
         else
-          echo "Deployment failed! Checking nginx status..."
+          echo "Deployment failed!"
           sudo systemctl status nginx --no-pager
-          echo "Checking port 80:"
-          sudo netstat -tlnp | grep :80 || true
-          echo "Full curl output:"
           curl -v http://localhost/ || exit 1
         fi
 
@@ -104,4 +92,3 @@ jobs:
       run: |
         rm -rf ./deploy_extract
         rm -rf ./artifact
-        echo "Cleanup completed."
