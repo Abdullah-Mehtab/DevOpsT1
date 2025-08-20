@@ -8,7 +8,6 @@ on:
 
 jobs:
   deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     name: CD on self-hosted
     runs-on: [self-hosted, linux, x64]
 
@@ -16,6 +15,15 @@ jobs:
       DEPLOY_DIR: /var/www/devopst1
 
     steps:
+    - name: Checkout current repository
+      uses: actions/checkout@v4
+
+    - name: Wait for previous workflow success
+      if: ${{ github.event.workflow_run.conclusion != 'success' }}
+      run: |
+        echo "Upstream workflow did not succeed. Exiting."
+        exit 1
+
     - name: Download artifact from CI
       uses: actions/download-artifact@v4
       with:
@@ -24,50 +32,25 @@ jobs:
         github-token: ${{ secrets.PAT }}
         run-id: ${{ github.event.workflow_run.id }}
 
-    - name: Verify and extract artifact
+    - name: List downloaded files
       run: |
-        # Check if artifact exists
-        if [ ! -f "./artifact/deploy.zip" ]; then
-          echo "Error: Artifact not found!"
-          ls -la ./artifact/
-          exit 1
-        fi
-        
-        # Extract artifact
+        ls -la ./artifact
+
+    - name: Extract and deploy
+      run: |
+        # Extract the artifact
         unzip -o ./artifact/deploy.zip -d /tmp/deploy_temp
         
-        # Verify extraction
-        if [ ! -d "/tmp/deploy_temp/public" ]; then
-          echo "Error: Extraction failed or wrong structure!"
-          ls -la /tmp/deploy_temp/
-          exit 1
-        fi
-
-    - name: Deploy to production
-      run: |
-        # Copy files to deployment directory
-        sudo cp -r /tmp/deploy_temp/public/* "$DEPLOY_DIR/"
+        # Deploy to nginx directory
+        sudo mkdir -p $DEPLOY_DIR
+        sudo cp -r /tmp/deploy_temp/public/* $DEPLOY_DIR/
+        sudo chown -R www-data:www-data $DEPLOY_DIR
         
-        # Set proper permissions
-        sudo chown -R www-data:www-data "$DEPLOY_DIR"
-        sudo chmod -R 755 "$DEPLOY_DIR"
-        
-        # Test nginx configuration
+        # Test and restart nginx
         sudo nginx -t
-        
-        # Restart nginx
         sudo systemctl restart nginx
 
     - name: Verify deployment
       run: |
-        # Wait for nginx to start
-        sleep 3
-        
-        # Test the deployment
-        if curl -f http://localhost/; then
-          echo "Deployment successful!"
-        else
-          echo "Deployment failed!"
-          curl -v http://localhost/
-          exit 1
-        fi
+        sleep 2
+        curl -f http://localhost/ || (curl -v http://localhost/ && exit 1)
