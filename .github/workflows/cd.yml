@@ -123,11 +123,19 @@ jobs:
           fi
           echo "Artifact extracted successfully."
 
+      - name: Setup Git Identity
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # Use PAT instead of GITHUB_TOKEN for write permissions
+          github_token: ${{ secrets.PAT }}
           publish_dir: ./gh-pages-content/public
+          # Force push to handle any conflicts
+          force_orphan: true
 
       - name: Cleanup
         run: |
