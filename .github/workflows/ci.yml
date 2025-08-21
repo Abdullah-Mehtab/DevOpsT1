@@ -5,30 +5,37 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
-    name: CI - Build & Package
+  build-and-test:
+    name: CI Pipeline
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
 
-      - name: Install required packages
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y zip tidy
+    - name: Install system packages
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y zip tidy
 
-      - name: Lint / Validate HTML
-        # tidy will return non-zero on errors and fail the job (desired)
-        run: tidy -qe public/index.html
+    - name: Run HTML validator (tidy)
+      run: |
+        tidy -errors public/index.html || true
+        tidy -qe public/index.html
 
-      - name: Package build (zip)
-        run: |
-          # create a single artifact containing the public folder
-          zip -r deploy.zip public
+    - name: Run custom checks
+      run: |
+        ./ci-scripts/check_index.sh
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: deploy-artifact
-          path: deploy.zip
+    - name: Build deployment package
+      run: |
+        mkdir -p build
+        cp -r public build/
+        cd build
+        zip -r ../deploy.zip .
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: deploy-artifact
+        path: deploy.zip
