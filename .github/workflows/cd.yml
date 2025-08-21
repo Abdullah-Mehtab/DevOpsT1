@@ -20,7 +20,29 @@ jobs:
           echo "Workflow Run ID: ${{ github.event.workflow_run.id }}"
           echo "Head Branch: ${{ github.event.workflow_run.head_branch }}"
 
+      - name: Check if changes are in public directory
+        id: check-changes
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.PAT }}
+          script: |
+            try {
+              const commitSha = '${{ github.event.workflow_run.head_sha }}';
+              const { data: commitData } = await github.rest.repos.getCommit({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: commitSha
+              });
+              const files = commitData.files;
+              const hasPublicChanges = files.some(file => file.filename.startsWith('public/'));
+              core.setOutput('should-deploy', hasPublicChanges);
+              console.log(`Has changes in public directory: ${hasPublicChanges}`);
+            } catch (error) {
+              core.setFailed(`Failed to check changes: ${error}`);
+            }
+
       - name: Download artifact from CI
+        if: steps.check-changes.outputs.should-deploy == 'true'
         uses: actions/download-artifact@v4
         with:
           name: deploy-artifact
@@ -29,6 +51,7 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
 
       - name: Verify artifact
+        if: steps.check-changes.outputs.should-deploy == 'true'
         run: |
           if [ ! -f "./artifact/deploy.zip" ]; then
             echo "Error: Artifact not found!"
@@ -38,11 +61,13 @@ jobs:
           echo "Artifact found and verified."
 
       - name: Prepare extraction directory
+        if: steps.check-changes.outputs.should-deploy == 'true'
         run: |
           mkdir -p ./deploy_extract
           chmod 755 ./deploy_extract
 
       - name: Extract artifact
+        if: steps.check-changes.outputs.should-deploy == 'true'
         run: |
           unzip -o "./artifact/deploy.zip" -d "./deploy_extract"
           
@@ -53,26 +78,26 @@ jobs:
           fi
           echo "Artifact extracted successfully."
 
-      - name: Prepare deployment directory
+      - name: Deploy to deployment dir
+        if: steps.check-changes.outputs.should-deploy == 'true'
         run: |
           sudo mkdir -p "$DEPLOY_DIR"
           sudo chown -R $USER:$USER "$DEPLOY_DIR"
-          sudo chmod -R 755 "$DEPLOY_DIR"
-
-      - name: Copy files to deployment directory
-        run: |
-          cp -r "./deploy_extract/public/"* "$DEPLOY_DIR/"
+          rsync -a --delete ./deploy_extract/public/ "$DEPLOY_DIR/"
           sudo chown -R www-data:www-data "$DEPLOY_DIR"
 
       - name: Test nginx configuration
+        if: steps.check-changes.outputs.should-deploy == 'true'
         run: |
           sudo -n nginx -t
 
       - name: Restart nginx
+        if: steps.check-changes.outputs.should-deploy == 'true'
         run: |
           sudo -n systemctl restart nginx
 
       - name: Verify deployment
+        if: steps.check-changes.outputs.should-deploy == 'true'
         run: |
           sleep 5
           if curl -f http://localhost/; then
@@ -86,6 +111,7 @@ jobs:
           fi
 
       - name: Cleanup
+        if: steps.check-changes.outputs.should-deploy == 'true'
         run: |
           rm -rf ./deploy_extract
           rm -rf ./artifact
@@ -96,7 +122,34 @@ jobs:
     name: Deploy to GitHub Pages
     runs-on: ubuntu-latest
     steps:
+      - name: Check workflow context
+        run: |
+          echo "Workflow Run ID: ${{ github.event.workflow_run.id }}"
+          echo "Head Branch: ${{ github.event.workflow_run.head_branch }}"
+
+      - name: Check if changes are in public directory
+        id: check-changes
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.PAT }}
+          script: |
+            try {
+              const commitSha = '${{ github.event.workflow_run.head_sha }}';
+              const { data: commitData } = await github.rest.repos.getCommit({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: commitSha
+              });
+              const files = commitData.files;
+              const hasPublicChanges = files.some(file => file.filename.startsWith('public/'));
+              core.setOutput('should-deploy', hasPublicChanges);
+              console.log(`Has changes in public directory: ${hasPublicChanges}`);
+            } catch (error) {
+              core.setFailed(`Failed to check changes: ${error}`);
+            }
+
       - name: Download artifact from CI
+        if: steps.check-changes.outputs.should-deploy == 'true'
         uses: actions/download-artifact@v4
         with:
           name: deploy-artifact
@@ -105,6 +158,7 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
 
       - name: Verify artifact
+        if: steps.check-changes.outputs.should-deploy == 'true'
         run: |
           if [ ! -f "./artifact/deploy.zip" ]; then
             echo "Error: Artifact not found!"
@@ -114,6 +168,7 @@ jobs:
           echo "Artifact found and verified."
 
       - name: Extract artifact
+        if: steps.check-changes.outputs.should-deploy == 'true'
         run: |
           unzip -o "./artifact/deploy.zip" -d "./gh-pages-content"
           if [ ! -d "./gh-pages-content/public" ]; then
@@ -124,18 +179,20 @@ jobs:
           echo "Artifact extracted successfully."
 
       - name: Setup Git Identity
+        if: steps.check-changes.outputs.should-deploy == 'true'
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Deploy to GitHub Pages
+        if: steps.check-changes.outputs.should-deploy == 'true'
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.PAT }}
           publish_dir: ./gh-pages-content/public
-          # Force push to handle any conflicts
           force_orphan: true
 
       - name: Cleanup
+        if: steps.check-changes.outputs.should-deploy == 'true'
         run: |
           rm -rf ./artifact ./gh-pages-content
