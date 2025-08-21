@@ -25,7 +25,7 @@ jobs:
         with:
           name: deploy-artifact
           path: ./artifact
-          github-token: ${{ secrets.PAT }}
+          github-token: ${{ }}
           run-id: ${{ github.event.workflow_run.id }}
 
       - name: Verify artifact
@@ -101,7 +101,7 @@ jobs:
         with:
           name: deploy-artifact
           path: ./artifact
-          github-token: ${{ secrets.PAT }}
+          github-token: ${{  }}
           run-id: ${{ github.event.workflow_run.id }}
 
       - name: Verify artifact
@@ -131,7 +131,7 @@ jobs:
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
-          github_token: ${{ secrets.PAT }}
+          github_token: ${{  }}
           publish_dir: ./gh-pages-content/public
           # Force push to handle any conflicts
           force_orphan: true
