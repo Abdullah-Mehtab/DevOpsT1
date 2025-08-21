@@ -6,6 +6,7 @@ on:
     paths:
       - 'public/**'
       - '.github/workflows/ci.yml'
+      - 'ci-scripts/**'
 
 jobs:
   build-and-test:
