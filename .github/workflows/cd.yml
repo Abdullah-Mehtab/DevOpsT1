@@ -131,7 +131,6 @@ jobs:
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
-          # Use PAT instead of GITHUB_TOKEN for write permissions
           github_token: ${{ secrets.PAT }}
           publish_dir: ./gh-pages-content/public
           # Force push to handle any conflicts
