@@ -1,0 +1,45 @@
+name: WordPress App CI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'apps/wordpress/**'
+
+jobs:
+  validate:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate wp-config.php.template
+        run: |
+          cd apps/wordpress
+          if [ ! -f "wp-config.php.template" ]; then
+            echo "Error: wp-config.php.template not found!"
+            exit 1
+          fi
+          
+          # Basic validation - check if template contains required placeholders
+          if ! grep -q "DB_NAME" wp-config.php.template || \
+             ! grep -q "DB_USER" wp-config.php.template || \
+             ! grep -q "DB_PASSWORD" wp-config.php.template || \
+             ! grep -q "DB_HOST" wp-config.php.template; then
+            echo "Error: wp-config.php.template missing required placeholders!"
+            exit 1
+          fi
+          
+          echo "wp-config.php.template validation successful"
+
+      - name: Package artifact
+        run: |
+          cd apps/wordpress
+          zip ../../wordpress-config.zip wp-config.php.template
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wordpress-artifact
+          path: wordpress-config.zip
