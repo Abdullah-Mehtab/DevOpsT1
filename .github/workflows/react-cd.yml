@@ -46,18 +46,18 @@ jobs:
 
       - name: Deploy to server using rsync
         run: |
-          sudo mkdir -p /var/www/reactapp/dist/
-          sudo chown -R $USER:$USER /var/www/reactapp/dist/
+          sudo -n mkdir -p /var/www/reactapp/dist/
+          sudo -n chown -R $USER:$USER /var/www/reactapp/dist/
           rsync -a --delete ./deploy_extract/dist/ /var/www/reactapp/dist/
-          sudo chown -R www-data:www-data /var/www/reactapp/dist/
-          sudo chmod -R 755 /var/www/reactapp/dist/
+          sudo -n chown -R www-data:www-data /var/www/reactapp/dist/
+          sudo -n chmod -R 755 /var/www/reactapp/dist/
 
       - name: Deploy Nginx config
         run: |
-          sudo cp configs/nginx/xyz-com /etc/nginx/sites-available/xyz-com
-          sudo ln -sf /etc/nginx/sites-available/xyz-com /etc/nginx/sites-enabled/
-          sudo nginx -t
-          sudo systemctl reload nginx
+          sudo -n cp configs/nginx/xyz-com /etc/nginx/sites-available/xyz-com
+          sudo -n ln -sf /etc/nginx/sites-available/xyz-com /etc/nginx/sites-enabled/
+          sudo -n nginx -t
+          sudo -n systemctl reload nginx
 
       - name: Cleanup
         run: |
