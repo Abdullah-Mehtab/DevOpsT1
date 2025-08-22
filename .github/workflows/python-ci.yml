@@ -19,10 +19,15 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install dependencies and pytest
+      - name: Install dependencies and pytest with retry
         run: |
           cd apps/pythonapp
-          pip install -r requirements.txt
+          # Try to install with retries in case of network issues
+          for i in {1..5}; do
+            pip install --retries 3 -r requirements.txt && break
+            echo "Attempt $i failed, waiting 10 seconds before retry..."
+            sleep 10
+          done
           pip install pytest
 
       - name: Run tests

@@ -23,10 +23,9 @@ def test_index_post_invalid(client):
 def test_index_post_valid(client):
     """Test POST with a valid number. Since the number is random, we check for expected responses."""
     # First, make a GET request to initialize the session
-    with client:
-        client.get('/')
-        # Post a valid guess
-        response = client.post('/', data={'guess': '50'})
-        assert response.status_code == 200
-        # The response should contain one of these messages
-        assert b'Too low' in response.data or b'Too high' in response.data or b'You got it' in response.data
+    client.get('/')
+    # Post a valid guess
+    response = client.post('/', data={'guess': '50'})
+    assert response.status_code == 200
+    # The response should contain one of these messages
+    assert b'Too low' in response.data or b'Too high' in response.data or b'You got it' in response.data
