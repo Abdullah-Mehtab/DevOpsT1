@@ -1,0 +1,5 @@
+error: server down
+info: process started
+warning: high memory usage
+error: disk full
+info: system rebooted
