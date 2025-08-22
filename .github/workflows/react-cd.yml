@@ -8,27 +8,47 @@ on:
 
 jobs:
   deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' }}
     runs-on: self-hosted
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Check workflow context
+        run: |
+          echo "Workflow Run ID: ${{ github.event.workflow_run.id }}"
+          echo "Head Branch: ${{ github.event.workflow_run.head_branch }}"
 
-      - name: Download artifact
+      - name: Download artifact from CI
         uses: actions/download-artifact@v4
         with:
           name: react-artifact
-          path: react-artifact
+          path: ./artifact
+          github-token: ${{ secrets.PAT }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Verify artifact
+        run: |
+          if [ ! -f "./artifact/react-build.zip" ]; then
+            echo "Error: Artifact not found!"
+            ls -la ./artifact/
+            exit 1
+          fi
+          echo "Artifact found and verified."
 
       - name: Extract artifact
         run: |
-          unzip react-artifact/react-build.zip -d react-artifact/extracted
+          unzip -o "./artifact/react-build.zip" -d "./deploy_extract"
+          if [ ! -d "./deploy_extract/dist" ]; then
+            echo "Error: Extraction failed or wrong structure!"
+            ls -la "./deploy_extract/"
+            exit 1
+          fi
+          echo "Artifact extracted successfully."
 
-      - name: Deploy React app
+      - name: Deploy to server using rsync
         run: |
           sudo mkdir -p /var/www/reactapp/dist/
-          sudo cp -r react-artifact/extracted/dist/* /var/www/reactapp/dist/
+          sudo chown -R $USER:$USER /var/www/reactapp/dist/
+          rsync -a --delete ./deploy_extract/dist/ /var/www/reactapp/dist/
           sudo chown -R www-data:www-data /var/www/reactapp/dist/
           sudo chmod -R 755 /var/www/reactapp/dist/
 
@@ -38,3 +58,9 @@ jobs:
           sudo ln -sf /etc/nginx/sites-available/xyz-com /etc/nginx/sites-enabled/
           sudo nginx -t
           sudo systemctl reload nginx
+
+      - name: Cleanup
+        run: |
+          rm -rf ./deploy_extract
+          rm -rf ./artifact
+          echo "Cleanup completed."
