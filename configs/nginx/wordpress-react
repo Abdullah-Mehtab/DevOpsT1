@@ -1,6 +1,8 @@
 server {
     listen 80;
+    listen [::]:80;
     server_name abc.com;
+
     root /var/www/wordpress;
     index index.php index.html index.htm;
 
@@ -17,4 +19,3 @@ server {
         deny all;
     }
 }
-
