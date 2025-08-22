@@ -1,0 +1,106 @@
+name: Python App CD
+
+on:
+  workflow_run:
+    workflows: [Python App CI]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' }}
+    runs-on: self-hosted
+
+    steps:
+      - name: Check workflow context
+        run: |
+          echo "Workflow Run ID: ${{ github.event.workflow_run.id }}"
+          echo "Head Branch: ${{ github.event.workflow_run.head_branch }}"
+
+      - name: Download artifact from CI
+        uses: actions/download-artifact@v4
+        with:
+          name: python-artifact
+          path: ./artifact
+          github-token: ${{ secrets.PAT }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Verify artifact
+        run: |
+          if [ ! -f "./artifact/python-app.zip" ]; then
+            echo "Error: Artifact not found!"
+            ls -la ./artifact/
+            exit 1
+          fi
+          echo "Artifact found and verified."
+
+      - name: Extract artifact
+        run: |
+          unzip -o "./artifact/python-app.zip" -d "./deploy_extract"
+          if [ ! -f "./deploy_extract/app.py" ]; then
+            echo "Error: Extraction failed or app.py not found!"
+            ls -la "./deploy_extract/"
+            exit 1
+          fi
+          echo "Artifact extracted successfully."
+
+      - name: Deploy to server using rsync
+        run: |
+          sudo -n mkdir -p /var/www/pythonapp/
+          sudo -n chown -R $USER:$USER /var/www/pythonapp/
+          rsync -a --delete ./deploy_extract/ /var/www/pythonapp/
+          
+      - name: Set up virtual environment and install dependencies
+        run: |
+          cd /var/www/pythonapp
+          # Create virtual environment if it doesn't exist
+          if [ ! -d "venv" ]; then
+            python3 -m venv venv
+          fi
+          # Install dependencies
+          source venv/bin/activate
+          pip install -r requirements.txt
+          deactivate
+
+      - name: Set proper ownership
+        run: |
+          sudo -n chown -R www-data:www-data /var/www/pythonapp/
+          sudo -n chmod -R 755 /var/www/pythonapp/
+
+      - name: Restart Python service
+        run: |
+          sudo -n systemctl restart pythonapp
+
+      - name: Check service status
+        run: |
+          sleep 3  # Wait a moment for service to restart
+          sudo -n systemctl status pythonapp --no-pager
+
+      - name: Verify deployment
+        run: |
+          # Wait a moment for the app to start
+          sleep 5
+          # Test if the Flask app is responding
+          if curl -f http://localhost:8000/ >/dev/null 2>&1; then
+            echo "Deployment successful! Flask app is responding."
+          else
+            echo "Deployment may have failed - checking service status:"
+            sudo -n systemctl status pythonapp --no-pager
+            exit 1
+          fi
+
+      - name: Deploy Nginx config (if needed)
+        run: |
+          # Only deploy Nginx config if it has changed
+          if [ -f "./deploy_extract/configs/nginx/xyz-com" ]; then
+            sudo -n cp ./deploy_extract/configs/nginx/xyz-com /etc/nginx/sites-available/xyz-com
+            sudo -n ln -sf /etc/nginx/sites-available/xyz-com /etc/nginx/sites-enabled/
+            sudo -n nginx -t
+            sudo -n systemctl reload nginx
+          fi
+
+      - name: Cleanup
+        run: |
+          rm -rf ./deploy_extract
+          rm -rf ./artifact
+          echo "Cleanup completed."
