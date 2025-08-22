@@ -14,26 +14,29 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Validate wp-config.php.template
+      - name: Validate WordPress config template
         run: |
           cd apps/wordpress
+          
+          # Check if template file exists
           if [ ! -f "wp-config.php.template" ]; then
             echo "Error: wp-config.php.template not found!"
+            ls -la
             exit 1
           fi
           
-          # Basic validation - check if template contains required placeholders
-          if ! grep -q "DB_NAME" wp-config.php.template || \
-             ! grep -q "DB_USER" wp-config.php.template || \
-             ! grep -q "DB_PASSWORD" wp-config.php.template || \
-             ! grep -q "DB_HOST" wp-config.php.template; then
-            echo "Error: wp-config.php.template missing required placeholders!"
-            exit 1
-          fi
+          # Validate template contains required placeholders
+          REQUIRED_PLACEHOLDERS=("DB_NAME" "DB_USER" "DB_PASSWORD" "DB_HOST")
+          for placeholder in "${REQUIRED_PLACEHOLDERS[@]}"; do
+            if ! grep -q "$placeholder" wp-config.php.template; then
+              echo "Error: wp-config.php.template missing required placeholder: $placeholder"
+              exit 1
+            fi
+          done
           
           echo "wp-config.php.template validation successful"
 
-      - name: Package artifact
+      - name: Package WordPress config
         run: |
           cd apps/wordpress
           zip ../../wordpress-config.zip wp-config.php.template

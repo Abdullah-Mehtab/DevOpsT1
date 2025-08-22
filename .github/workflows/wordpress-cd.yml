@@ -59,11 +59,12 @@ jobs:
             echo "Error: Failed to generate wp-config.php!"
             exit 1
           fi
+          
           echo "wp-config.php generated successfully"
 
       - name: Deploy WordPress config
         run: |
-          sudo -n cp ./deploy_extract/wp-config.php /var/www/wordpress/wp-config.php
+          sudo -n cp ./deploy_extract/wp-config.php /var/www/wordpress/
           sudo -n chown www-data:www-data /var/www/wordpress/wp-config.php
           sudo -n chmod 640 /var/www/wordpress/wp-config.php
 
@@ -76,26 +77,21 @@ jobs:
             sudo -n systemctl reload nginx
           fi
 
-      - name: Reload PHP-FPM if needed
+      - name: Reload PHP-FPM
         run: |
-          # Check if PHP-FPM is running and reload it
-          if sudo -n systemctl is-active --quiet php8.1-fpm; then
-            sudo -n systemctl reload php8.1-fpm
-            echo "PHP-FPM reloaded successfully"
-          else
-            echo "PHP-FPM is not running, skipping reload"
-          fi
+          sudo -n systemctl reload php8.1-fpm
 
       - name: Verify deployment
         run: |
-          # Check if the config file was deployed correctly
-          if sudo -n test -f /var/www/wordpress/wp-config.php; then
-            echo "wp-config.php deployed successfully"
-            # Check file permissions
-            permissions=$(sudo -n stat -c "%a %U:%G" /var/www/wordpress/wp-config.php)
-            echo "File permissions: $permissions"
+          # Wait a moment for services to reload
+          sleep 3
+          # Check if WordPress is accessible (basic check)
+          if curl -f http://localhost/ >/dev/null 2>&1; then
+            echo "Deployment successful! WordPress is responding."
           else
-            echo "Error: wp-config.php not found at destination!"
+            echo "Deployment may have failed - checking service status:"
+            sudo -n systemctl status nginx --no-pager
+            sudo -n systemctl status php8.1-fpm --no-pager
             exit 1
           fi
 
