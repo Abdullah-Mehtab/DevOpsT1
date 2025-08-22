@@ -1,9 +1,9 @@
-PING google.com (142.250.202.142) 56(84) bytes of data.
-64 bytes from pnfjra-al-in-f14.1e100.net (142.250.202.142): icmp_seq=1 ttl=115 time=66.1 ms
-64 bytes from pnfjra-al-in-f14.1e100.net (142.250.202.142): icmp_seq=2 ttl=115 time=37.9 ms
-64 bytes from pnfjra-al-in-f14.1e100.net (142.250.202.142): icmp_seq=3 ttl=115 time=34.9 ms
-64 bytes from lbg02s04-in-f14.1e100.net (142.250.202.142): icmp_seq=4 ttl=115 time=32.2 ms
+PING google.com (142.250.192.110) 56(84) bytes of data.
+64 bytes from bom12s17-in-f14.1e100.net (142.250.192.110): icmp_seq=1 ttl=112 time=412 ms
+64 bytes from bom12s17-in-f14.1e100.net (142.250.192.110): icmp_seq=2 ttl=112 time=435 ms
+64 bytes from bom12s17-in-f14.1e100.net (142.250.192.110): icmp_seq=3 ttl=112 time=777 ms
+64 bytes from bom12s17-in-f14.1e100.net (142.250.192.110): icmp_seq=4 ttl=112 time=390 ms
 
 --- google.com ping statistics ---
-4 packets transmitted, 4 received, 0% packet loss, time 3004ms
-rtt min/avg/max/mdev = 32.218/42.777/66.111/13.621 ms
+4 packets transmitted, 4 received, 0% packet loss, time 3003ms
+rtt min/avg/max/mdev = 389.649/503.368/776.776/158.674 ms
