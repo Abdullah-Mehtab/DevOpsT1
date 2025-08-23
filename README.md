@@ -1,33 +1,152 @@
-# DevOpsT1
+# DevOpsT1 - Multi-Application Hosting Platform
 
-## Project
-Simple static site hosting for `public/index.html`.
+A complete CI/CD pipeline implementation for hosting multiple web applications on a single Ubuntu server with automated deployment using GitHub Actions.
 
-## CI (Continuous Integration)
-- Workflow: `.github/workflows/ci.yml`
-- Trigger: `push` to branch `main`.
-- Steps:
-  - install `tidy` HTML validator
-  - run `tidy -qe public/index.html`
-  - run custom script `ci-scripts/check_index.sh`
-  - build zip artifact `deploy.zip`
-  - upload artifact as `deploy-artifact`
+## 🚀 Applications Hosted
 
-## CD (Continuous Deployment)
-- Workflow: `.github/workflows/cd.yml`
-- Trigger: `workflow_run` (fires after CI `CI Pipeline` completes successfully)
-- Runs on: **self-hosted runner** (label: `self-hosted`, `linux`, `x64`)
-- Steps:
-  - download artifact via `actions/download-artifact`
-  - unpack artifact and copy to `DEPLOY_DIR` (set in workflow env)
-  - restart nginx and verify with `curl`
+- **React App** (`xyz.com/react`) - Modern Vite React application
+- **Python Flask App** (`xyz.com`) - Number guessing game API
+- **WordPress Site** (`abc.com`) - CMS with automated config deployment
+- **Static HTML App** (Port 6969) - Legacy application
 
-## How to run locally
-1. Ensure nginx installed and started: `sudo apt install -y nginx && sudo systemctl enable --now nginx`
-2. Move your index to `public/index.html`, `git add/commit/push`.
-3. Check CI logs on GitHub Actions.
-4. Setup self-hosted runner on the machine where you want to run CD (see repo settings -> Actions -> Runners).
+## 📁 Project Structure
 
-## Notes
-- Self-hosted runner must be registered under repo `DevOpsT1` and be online to pick up CD jobs.
-- Runner must have permissions to write to deploy folder and restart nginx (we used a restricted sudoers file for `systemctl restart nginx`).
+```
+DevOpsT1/
+├── .github/workflows/          # CI/CD pipelines
+├── apps/
+│   ├── reactapp/               # React application source
+│   ├── pythonapp/              # Flask application + tests
+│   └── wordpress/              # WordPress config template
+├── configs/
+│   ├── nginx/                  # Nginx server configurations
+│   └── systemd/                # Systemd service files
+└── public/                     # Static HTML app
+```
+
+## 🔧 CI/CD Pipelines
+
+### React Application
+- **CI Workflow**: `.github/workflows/react-ci.yml`
+  - Trigger: push to main branch when changes in `apps/reactapp/**`
+  - Steps:
+    - Setup Node.js
+    - Install dependencies with `npm install`
+    - Build application with `npm run build`
+    - Create artifact `react-build.zip`
+    - Upload artifact as `react-artifact`
+
+- **CD Workflow**: `.github/workflows/react-cd.yml`
+  - Trigger: workflow_run after successful React CI completion
+  - Runs on: self-hosted runner (labels: self-hosted, linux, x64)
+  - Steps:
+    - Download artifact using PAT authentication
+    - Extract and deploy to `/var/www/reactapp/dist/` using rsync
+    - Set proper ownership (`www-data:www-data`)
+    - Deploy Nginx config and reload service
+
+### Python Flask Application
+- **CI Workflow**: `.github/workflows/python-ci.yml`
+  - Trigger: push to main branch when changes in `apps/pythonapp/**`
+  - Steps:
+    - Setup Python
+    - Install dependencies with `pip install -r requirements.txt`
+    - Run tests with `pytest`
+    - Create artifact `python-app.zip`
+    - Upload artifact as `python-artifact`
+
+- **CD Workflow**: `.github/workflows/python-cd.yml`
+  - Trigger: workflow_run after successful Python CI completion
+  - Runs on: self-hosted runner
+  - Steps:
+    - Download artifact using PAT authentication
+    - Extract and deploy to `/var/www/pythonapp/`
+    - Manage virtual environment and install dependencies
+    - Set proper ownership and permissions
+    - Restart `pythonapp` systemd service
+    - Deploy Nginx config and reload service
+
+### WordPress Application
+- **CI Workflow**: `.github/workflows/wordpress-ci.yml`
+  - Trigger: push to main branch when changes in `apps/wordpress/**`
+  - Steps:
+    - Validate `wp-config.php.template` contains required placeholders
+    - Create artifact `wordpress-config.zip`
+    - Upload artifact as `wordpress-artifact`
+
+- **CD Workflow**: `.github/workflows/wordpress-cd.yml`
+  - Trigger: workflow_run after successful WordPress CI completion
+  - Runs on: self-hosted runner
+  - Steps:
+    - Download artifact using PAT authentication
+    - Generate `wp-config.php` from template with GitHub Secrets
+    - Deploy config to `/var/www/wordpress/`
+    - Set secure file permissions
+    - Deploy Nginx config and reload services (Nginx + PHP-FPM)
+
+### Static HTML App
+- **CI Workflow**: `.github/workflows/html-ci.yml`
+  - Trigger: push to main branch when changes in `public/**`
+  - Steps:
+    - Validate HTML with tidy validator
+    - Run custom validation script
+    - Create artifact `deploy.zip`
+    - Upload artifact as `deploy-artifact`
+
+- **CD Workflow**: `.github/workflows/html-cd.yml`
+  - Trigger: workflow_run after successful HTML CI completion
+  - Runs on: self-hosted runner
+  - Steps:
+    - Download artifact using PAT authentication
+    - Extract and deploy to `/var/www/devopst1/` using rsync
+    - Set proper ownership
+    - Restart Nginx and verify deployment
+
+## ⚙️ Setup Requirements
+
+### Server Environment
+- Ubuntu server with self-hosted GitHub Actions runner
+- Nginx, MySQL, PHP-FPM, Python, Node.js installed
+- Passwordless sudo configured for deployment commands
+
+### GitHub Secrets
+- `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST` - WordPress database
+- `PAT` - Personal Access Token for artifacts
+
+## 🚦 How to Run
+
+### Development
+1. Clone the repository:
+```bash
+git clone git@github.com:Abdullah-Mehtab/DevOpsT1.git
+cd DevOpsT1
+```
+
+2. Make changes to application code in respective `apps/` directories
+
+3. Commit and push changes:
+```bash
+git pull origin main
+git add .
+git commit -m "Description of changes"
+git push origin main
+```
+
+### Automated Deployment
+Pushing to main branch automatically triggers the appropriate CI/CD pipeline based on changed paths.
+
+## 📊 Monitoring
+
+All pipeline runs are logged in GitHub Actions with detailed execution logs and status notifications.
+
+## 🔗 Links
+
+- **GitHub Repository**: https://github.com/Abdullah-Mehtab/DevOpsT1
+- **Live Applications**: 
+  - WordPress: abc.com
+  - Python/React: xyz.com
+  - HTML App: port 6969
+
+---
+
+**Maintained by Abdullah Mehtab** - [GitHub](https://github.com/Abdullah-Mehtab) | [Email](mailto:abdullahmehtab666@gmail.com)
