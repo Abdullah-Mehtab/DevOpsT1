@@ -100,14 +100,14 @@ jobs:
         if: steps.check-changes.outputs.should-deploy == 'true'
         run: |
           sleep 5
-          if curl -f http://localhost/; then
+          if curl -f http://party:6969/; then
             echo "Deployment successful!"
-            curl -s http://localhost/ | tail -3
+            curl -s http://party:6969/ | tail -3
           else
             echo "Deployment failed! Checking nginx status..."
             sudo -n systemctl status nginx --no-pager
             sudo -n netstat -tlnp | grep :80 || true
-            curl -v http://localhost/ || exit 1
+            curl -v http://party:6969/ || exit 1
           fi
 
       - name: Cleanup
