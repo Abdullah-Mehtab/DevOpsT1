@@ -88,8 +88,6 @@ jobs:
             echo "✓ WordPress is accessible at http://abc.com/"
           else
             echo "⚠ WordPress may not be accessible at http://abc.com/"
-            echo "This could be due to DNS configuration or other network issues"
-            # Don't fail the deployment for this, as it might be an external issue
           fi
 
       - name: Cleanup
