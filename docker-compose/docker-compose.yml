@@ -1,0 +1,69 @@
+version: '3.8'
+# This version of Docker Compose file format ensures compatibility with the features we're using
+
+services:
+  # MySQL Database Service for WordPress
+  db:
+    image: mysql:8.0 # Using the official MySQL 8.0 image
+    restart: always   # Automatically restart if the container stops
+    environment:      # Environment variables for database configuration
+      MYSQL_ROOT_PASSWORD: rootpassword # Root password for MySQL (change if needed)
+      MYSQL_DATABASE: wordpress         # Database name (matches your original setup)
+      MYSQL_USER: admin                 # Database user (matches your original setup)
+      MYSQL_PASSWORD: admin             # Database password (matches your original setup)
+    volumes:
+      - db_data:/var/lib/mysql # Persistent volume for database data (survives container restarts)
+    networks:
+      - app-network # Connect to our custom network
+
+  # WordPress Service
+  wordpress:
+    build: ../docker/wordpress # Build from the Dockerfile in the ../docker/wordpress directory
+    restart: always
+    depends_on: # Ensure the database container starts first
+      - db
+    environment: # WordPress-specific environment variables
+      WORDPRESS_DB_HOST: db # Use the service name 'db' as the hostname (Docker internal DNS)
+      WORDPRESS_DB_USER: admin # Database user (matches your MYSQL_USER)
+      WORDPRESS_DB_PASSWORD: admin # Database password (matches your MYSQL_PASSWORD)
+      WORDPRESS_DB_NAME: wordpress # Database name (matches your MYSQL_DATABASE)
+    ports:
+      - "8080:80" # Map host port 8080 to container port 80 (Apache)
+    volumes:
+      - wordpress_data:/var/www/html # Persistent volume for WordPress files
+    networks:
+      - app-network # Connect to our custom network
+
+  # Python Flask Application Service
+  python-app:
+    build: ../docker/python-app # Build from the Dockerfile in the ../docker/python-app directory
+    ports:
+      - "8000:8000" # Map host port 8000 to container port 8000 (Flask)
+    networks:
+      - app-network # Connect to our custom network
+
+  # React Application Service
+  react-app:
+    build: ../docker/react-app # Build from the Dockerfile in the ../docker/react-app directory
+    ports:
+      - "3000:80" # Map host port 3000 to container port 80 (Nginx)
+    networks:
+      - app-network # Connect to our custom network
+
+  # HTML Application Service
+  html-app:
+    build: ../docker/html-app # Build from the Dockerfile in the ../docker/html-app directory
+    ports:
+      - "6969:80" # Map host port 6969 to container port 80 (Nginx)
+    networks:
+      - app-network # Connect to our custom network
+
+# Define volumes for data persistence
+volumes:
+  db_data: # Volume for MySQL database files
+  wordpress_data: # Volume for WordPress core files, themes, and plugins
+
+# Define a custom network for all services to communicate
+networks:
+  app-network: # All services will be connected to this network
+    driver: bridge # Use the default bridge network driver
