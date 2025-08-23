@@ -1,0 +1,372 @@
+tk-lpt-0434@tklpt0434-Inspiron-5502:~/DevOpsT1/DevOpsT1$ lsb_release -a
+No LSB modules are available.
+Distributor ID:	Ubuntu
+Description:	Ubuntu 22.04.5 LTS
+Release:	22.04
+Codename:	jammy
+tk-lpt-0434@tklpt0434-Inspiron-5502:~/DevOpsT1/DevOpsT1$ uname -m
+x86_64
+tk-lpt-0434@tklpt0434-Inspiron-5502:~/DevOpsT1/DevOpsT1$ sudo netstat -tulpn
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name    
+tcp        0      0 0.0.0.0:6969            0.0.0.0:*               LISTEN      788/nginx: master p 
+tcp        0      0 127.0.0.53:53           0.0.0.0:*               LISTEN      491/systemd-resolve 
+tcp        0      0 0.0.0.0:8000            0.0.0.0:*               LISTEN      742/python          
+tcp        0      0 192.168.100.54:41855    0.0.0.0:*               LISTEN      577363/rustdesk     
+tcp        0      0 0.0.0.0:80              0.0.0.0:*               LISTEN      788/nginx: master p 
+tcp        0      0 127.0.0.1:3306          0.0.0.0:*               LISTEN      819/mysqld          
+tcp        0      0 127.0.0.1:33060         0.0.0.0:*               LISTEN      819/mysqld          
+tcp        0      0 0.0.0.0:2222            0.0.0.0:*               LISTEN      779/sshd: /usr/sbin 
+tcp        0      0 127.0.0.1:631           0.0.0.0:*               LISTEN      374517/cupsd        
+tcp6       0      0 :::6969                 :::*                    LISTEN      788/nginx: master p 
+tcp6       0      0 ::1:631                 :::*                    LISTEN      374517/cupsd        
+tcp6       0      0 :::80                   :::*                    LISTEN      788/nginx: master p 
+tcp6       0      0 :::2222                 :::*                    LISTEN      779/sshd: /usr/sbin 
+udp        0      0 0.0.0.0:56399           0.0.0.0:*                           553/avahi-daemon: r 
+udp        0      0 0.0.0.0:56917           0.0.0.0:*                           2485/firefox        
+udp        0      0 127.0.0.53:53           0.0.0.0:*                           491/systemd-resolve 
+udp        0      0 0.0.0.0:53224           0.0.0.0:*                           577363/rustdesk     
+udp        0      0 0.0.0.0:21119           0.0.0.0:*                           577363/rustdesk     
+udp        0      0 0.0.0.0:5353            0.0.0.0:*                           553/avahi-daemon: r 
+udp6       0      0 :::48406                :::*                                553/avahi-daemon: r 
+udp6       0      0 fe80::dde2:870d:bac:546 :::*                                575/NetworkManager  
+udp6       0      0 :::5353                 :::*                                553/avahi-daemon: r 
+tk-lpt-0434@tklpt0434-Inspiron-5502:~/DevOpsT1/DevOpsT1$ sudo ufw status verbose
+Status: inactive
+tk-lpt-0434@tklpt0434-Inspiron-5502:~/DevOpsT1/DevOpsT1$ sudo iptables -L -n -v
+Chain INPUT (policy ACCEPT 0 packets, 0 bytes)
+ pkts bytes target     prot opt in     out     source               destination         
+
+Chain FORWARD (policy ACCEPT 0 packets, 0 bytes)
+ pkts bytes target     prot opt in     out     source               destination         
+
+Chain OUTPUT (policy ACCEPT 0 packets, 0 bytes)
+ pkts bytes target     prot opt in     out     source               destination         
+tk-lpt-0434@tklpt0434-Inspiron-5502:~/DevOpsT1/DevOpsT1$ curl ifconfig.me
+39.49.130.36tk-lpt-0434@tklpt0434-Inspiron-5502:~/DevOpsT1/DevOpsT1$ hostname -I
+192.168.100.54 
+tk-lpt-0434@tklpt0434-Inspiron-5502:~/DevOpsT1/DevOpsT1$ cat /var/www/pythonapp/requirements.txt
+blinker==1.9.0
+click==8.2.1
+Flask==3.1.2
+itsdangerous==2.2.0
+Jinja2==3.1.6
+MarkupSafe==3.0.2
+Werkzeug==3.1.3
+tk-lpt-0434@tklpt0434-Inspiron-5502:~/DevOpsT1/DevOpsT1$ cat /var/www/reactapp/package.json
+{
+  "name": "reactapp",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.33.0",
+    "@types/react": "^19.1.10",
+    "@types/react-dom": "^19.1.7",
+    "@vitejs/plugin-react": "^5.0.0",
+    "@vitejs/plugin-react-swc": "^4.0.1",
+    "eslint": "^9.33.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.20",
+    "globals": "^16.3.0",
+    "vite": "^7.1.2"
+  }
+}
+tk-lpt-0434@tklpt0434-Inspiron-5502:~/DevOpsT1/DevOpsT1$ php -m
+[PHP Modules]
+calendar
+Core
+ctype
+curl
+date
+dom
+exif
+FFI
+fileinfo
+filter
+ftp
+gd
+gettext
+hash
+iconv
+intl
+json
+libxml
+mbstring
+mysqli
+mysqlnd
+openssl
+pcntl
+pcre
+PDO
+pdo_mysql
+Phar
+posix
+readline
+Reflection
+session
+shmop
+SimpleXML
+soap
+sockets
+sodium
+SPL
+standard
+sysvmsg
+sysvsem
+sysvshm
+tokenizer
+xml
+xmlreader
+xmlrpc
+xmlwriter
+xsl
+Zend OPcache
+zip
+zlib
+
+[Zend Modules]
+Zend OPcache
+
+tk-lpt-0434@tklpt0434-Inspiron-5502:~/DevOpsT1/DevOpsT1$ ls -la /var/www/devopst1/
+total 24
+drwxr-xr-x 2 www-data www-data  4096 Aug 22 00:39 .
+drwxr-xr-x 7 root     root      4096 Aug 20 14:18 ..
+-rw-r--r-- 1 www-data www-data 13811 Aug 22 00:39 index.html
+tk-lpt-0434@tklpt0434-Inspiron-5502:~/DevOpsT1/DevOpsT1$ sudo mysql -u root -p
+Enter password: 
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 15
+Server version: 8.0.43-0ubuntu0.22.04.1 (Ubuntu)
+
+Copyright (c) 2000, 2025, Oracle and/or its affiliates.
+
+Oracle is a registered trademark of Oracle Corporation and/or its
+affiliates. Other names may be trademarks of their respective
+owners.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+mysql> SELECT User, Host FROM mysql.user;
++------------------+-----------+
+| User             | Host      |
++------------------+-----------+
+| admin            | localhost |
+| debian-sys-maint | localhost |
+| mysql.infoschema | localhost |
+| mysql.session    | localhost |
+| mysql.sys        | localhost |
+| root             | localhost |
++------------------+-----------+
+6 rows in set (0.00 sec)
+
+mysql> SHOW DATABASES;
++--------------------+
+| Database           |
++--------------------+
+| information_schema |
+| mysql              |
+| performance_schema |
+| sys                |
+| wordpress          |
++--------------------+
+5 rows in set (0.00 sec)
+
+mysql> USE wordpress;
+Reading table information for completion of table and column names
+You can turn off this feature to get a quicker startup with -A
+
+Database changed
+mysql> SHOW TABLES;
++-----------------------+
+| Tables_in_wordpress   |
++-----------------------+
+| wp_commentmeta        |
+| wp_comments           |
+| wp_links              |
+| wp_options            |
+| wp_postmeta           |
+| wp_posts              |
+| wp_term_relationships |
+| wp_term_taxonomy      |
+| wp_termmeta           |
+| wp_terms              |
+| wp_usermeta           |
+| wp_users              |
++-----------------------+
+12 rows in set (0.00 sec)
+
+mysql> exit;
+Bye
+tk-lpt-0434@tklpt0434-Inspiron-5502:~/DevOpsT1/DevOpsT1$ sudo cat /etc/nginx/nginx.conf
+user www-data;
+worker_processes auto;
+pid /run/nginx.pid;
+include /etc/nginx/modules-enabled/*.conf;
+
+events {
+    worker_connections 768;
+}
+
+http {
+    sendfile on;
+    tcp_nopush on;
+    types_hash_max_size 2048;
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    ssl_protocols TLSv1 TLSv1.1 TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+
+    access_log /var/log/nginx/access.log;
+    error_log /var/log/nginx/error.log;
+
+    gzip on;
+
+    include /etc/nginx/conf.d/*.conf;
+    include /etc/nginx/sites-enabled/*;
+}
+tk-lpt-0434@tklpt0434-Inspiron-5502:~/DevOpsT1/DevOpsT1$ sudo cat /etc/nginx/sites-available/abc.com
+server {
+    listen 80;
+    server_name abc.com;
+    root /var/www/wordpress;
+    index index.php index.html index.htm;
+
+    location / {
+        try_files $uri $uri/ /index.php?$args;
+    }
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/var/run/php/php8.1-fpm.sock;
+    }
+
+    location ~ /\.ht {
+        deny all;
+    }
+}
+
+tk-lpt-0434@tklpt0434-Inspiron-5502:~/DevOpsT1/DevOpsT1$ sudo cat /etc/nginx/sites-available/xyz.com
+server {
+    listen 80;
+    server_name xyz.com;
+    
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /react {
+        alias /var/www/reactapp/dist;
+        index index.html index.htm;
+        try_files $uri $uri/ /react/index.html;
+    }
+}
+tk-lpt-0434@tklpt0434-Inspiron-5502:~/DevOpsT1/DevOpsT1$ sudo cat /etc/nginx/sites-available/devopst1
+server {
+    listen 80;
+    server_name _;
+
+    root /var/www/devopst1/public;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    # optional: small security headers (basic)
+    add_header X-Content-Type-Options nosniff;
+    add_header X-Frame-Options SAMEORIGIN;
+}
+tk-lpt-0434@tklpt0434-Inspiron-5502:~/DevOpsT1/DevOpsT1$ sudo cat /etc/systemd/system/pythonapp.service
+[Unit]
+Description=Python App
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/pythonapp
+Environment="PATH=/var/www/pythonapp/venv/bin"
+ExecStart=/var/www/pythonapp/venv/bin/python app.py
+
+[Install]
+WantedBy=multi-user.target
+tk-lpt-0434@tklpt0434-Inspiron-5502:~/DevOpsT1/DevOpsT1$ ls -la /var/www/
+total 28
+drwxr-xr-x  7 root        root        4096 Aug 20 14:18 .
+drwxr-xr-x 15 root        root        4096 Aug 20 02:37 ..
+drwxr-xr-x  2 www-data    www-data    4096 Aug 22 00:39 devopst1
+drwxr-xr-x  2 root        root        4096 Aug 20 02:37 html
+drwxr-xr-x  4 www-data    www-data    4096 Aug 22 11:03 pythonapp
+drwxr-xr-x  6 tk-lpt-0434 tk-lpt-0434 4096 Aug 20 15:14 reactapp
+drwxr-xr-x  5 www-data    www-data    4096 Aug 21 17:21 wordpress
+tk-lpt-0434@tklpt0434-Inspiron-5502:~/DevOpsT1/DevOpsT1$ ls -la /var/www/pythonapp/
+total 28
+drwxr-xr-x 4 www-data www-data 4096 Aug 22 11:03 .
+drwxr-xr-x 7 root     root     4096 Aug 20 14:18 ..
+-rwxr-xr-x 1 www-data www-data 2396 Aug 22 11:02 app.py
+drwxr-xr-x 3 www-data www-data 4096 Aug 22 11:03 .pytest_cache
+-rwxr-xr-x 1 www-data www-data  109 Aug 22 09:39 requirements.txt
+-rwxr-xr-x 1 www-data www-data 1169 Aug 22 11:00 test_app.py
+drwxr-xr-x 5 www-data www-data 4096 Aug 22 11:03 venv
+tk-lpt-0434@tklpt0434-Inspiron-5502:~/DevOpsT1/DevOpsT1$ ls -la /var/www/reactapp/
+total 152
+drwxr-xr-x   6 tk-lpt-0434 tk-lpt-0434   4096 Aug 20 15:14 .
+drwxr-xr-x   7 root        root          4096 Aug 20 14:18 ..
+drwxr-xr-x   3 www-data    www-data      4096 Aug 22 16:32 dist
+-rw-rw-r--   1 tk-lpt-0434 tk-lpt-0434    763 Aug 20 14:49 eslint.config.js
+-rw-rw-r--   1 tk-lpt-0434 tk-lpt-0434    253 Aug 20 14:49 .gitignore
+-rw-rw-r--   1 tk-lpt-0434 tk-lpt-0434    361 Aug 20 14:49 index.html
+drwxrwxr-x 117 tk-lpt-0434 tk-lpt-0434   4096 Aug 20 14:53 node_modules
+-rw-rw-r--   1 tk-lpt-0434 tk-lpt-0434    647 Aug 20 14:52 package.json
+-rw-rw-r--   1 tk-lpt-0434 tk-lpt-0434 103413 Aug 20 14:52 package-lock.json
+drwxrwxr-x   2 tk-lpt-0434 tk-lpt-0434   4096 Aug 20 14:49 public
+-rw-rw-r--   1 tk-lpt-0434 tk-lpt-0434    856 Aug 20 14:49 README.md
+drwxrwxr-x   3 tk-lpt-0434 tk-lpt-0434   4096 Aug 20 14:49 src
+-rw-rw-r--   1 tk-lpt-0434 tk-lpt-0434    501 Aug 20 15:14 vite.config.js
+tk-lpt-0434@tklpt0434-Inspiron-5502:~/DevOpsT1/DevOpsT1$ ls -la /var/www/wordpress/
+total 252
+drwxr-xr-x  5 www-data www-data  4096 Aug 21 17:21 .
+drwxr-xr-x  7 root     root      4096 Aug 20 14:18 ..
+-rw-r--r--  1 www-data www-data   405 Feb  6  2020 index.php
+-rw-r--r--  1 www-data www-data 19903 Mar  6 19:24 license.txt
+-rw-r--r--  1 www-data www-data  7425 Mar  7 13:45 readme.html
+-rw-r--r--  1 www-data www-data    33 Aug 20 16:32 test.php
+-rw-r--r--  1 www-data www-data  7387 Feb 13  2024 wp-activate.php
+drwxr-xr-x  9 www-data www-data  4096 Jul 15 20:09 wp-admin
+-rw-r--r--  1 www-data www-data   351 Feb  6  2020 wp-blog-header.php
+-rw-r--r--  1 www-data www-data  2323 Jun 14  2023 wp-comments-post.php
+-rw-r-----  1 www-data www-data  3403 Aug 23 13:55 wp-config.php
+-rw-r--r--  1 www-data www-data  3336 Oct 15  2024 wp-config-sample.php
+drwxr-xr-x  5 www-data www-data  4096 Aug 21 17:21 wp-content
+-rw-r--r--  1 www-data www-data  5617 Aug  3  2024 wp-cron.php
+drwxr-xr-x 30 www-data www-data 16384 Jul 15 20:09 wp-includes
+-rw-r--r--  1 www-data www-data  2502 Nov 27  2022 wp-links-opml.php
+-rw-r--r--  1 www-data www-data  3937 Mar 11  2024 wp-load.php
+-rw-r--r--  1 www-data www-data 51414 Feb  3  2025 wp-login.php
+-rw-r--r--  1 www-data www-data  8727 Feb  8  2025 wp-mail.php
+-rw-r--r--  1 www-data www-data 30081 Mar  4 18:06 wp-settings.php
+-rw-r--r--  1 www-data www-data 34516 Mar 10 23:16 wp-signup.php
+-rw-r--r--  1 www-data www-data  5102 Oct 18  2024 wp-trackback.php
+-rw-r--r--  1 www-data www-data  3205 Nov  8  2024 xmlrpc.php
+tk-lpt-0434@tklpt0434-Inspiron-5502:~/DevOpsT1/DevOpsT1$ ls -la /var/www/devopst1/
+total 24
+drwxr-xr-x 2 www-data www-data  4096 Aug 22 00:39 .
+drwxr-xr-x 7 root     root      4096 Aug 20 14:18 ..
+-rw-r--r-- 1 www-data www-data 13811 Aug 22 00:39 index.html
+

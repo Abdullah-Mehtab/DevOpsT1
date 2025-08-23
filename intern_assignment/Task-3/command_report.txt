@@ -1,0 +1,79 @@
+Linux Command Activity Report
+=============================
+
+1. Display all lines containing error:
+   Command: grep "error" logs.txt
+   Explanation: The grep command searches for patterns in files. Here, it finds all lines containing the word "error".
+   Flags: None used in this basic form.
+
+2. Count how many times info appears:
+   Command: grep -c "info" logs.txt
+   Explanation: The grep command with the -c flag counts the number of lines that match the pattern.
+   Flags: 
+     -c: Count the number of matching lines instead of displaying them.
+
+3. Print only the second word of each line:
+   Command: awk '{print $2}' logs.txt
+   Explanation: awk is a powerful text processing language. This command prints the second field (word) of each line.
+   Flags: None. The pattern '{print $2}' tells awk to print the second field.
+
+4. Count the number of lines:
+   Command: wc -l logs.txt
+   Explanation: The wc (word count) command counts lines, words, and characters. The -l flag counts only lines.
+   Flags:
+     -l: Print the line count.
+
+5. Show all running processes containing the word nginx:
+   Command: ps aux | grep nginx
+   Explanation: 
+     ps aux: Lists all running processes with detailed information
+     |: Pipe symbol redirects output of ps to grep
+     grep nginx: Filters processes containing "nginx"
+   Flags for ps:
+     a: Show processes for all users
+     u: Display user-oriented format
+     x: Include processes without a controlling terminal
+
+6. Find how many processes are running for root:
+   Command: ps aux | grep ^root | wc -l
+   Explanation:
+     ps aux: Lists all processes
+     grep ^root: Filters processes where the owner starts with "root" (^ indicates start of line)
+     wc -l: Counts the number of lines (processes)
+   Flags:
+     ^ in grep: Anchor to the beginning of the line
+
+7. Display the IP address of your server/vm:
+   Command: hostname -I
+   Explanation: The hostname command with -I flag displays all IP addresses of the host.
+   Flags:
+     -I: Display all network addresses of the host
+
+8. Show which ports are listening:
+   Command: netstat -tuln | grep LISTEN
+   Explanation:
+     netstat: Displays network connections, routing tables, interface statistics, etc.
+     -t: TCP connections
+     -u: UDP connections
+     -l: Listening sockets
+     -n: Show numerical addresses instead of trying to determine symbolic host names
+     grep LISTEN: Filters for lines containing "LISTEN"
+   Flags for netstat:
+     -t: TCP
+     -u: UDP
+     -l: Show listening sockets
+     -n: Don't resolve names
+
+9. Ping google.com and redirect the output to a file:
+   Command: ping -c 4 google.com > ping_result.txt
+   Explanation: The ping command tests network connectivity. Output is redirected to a file.
+   Flags:
+     -c 4: Send 4 packets then stop
+   Redirection:
+     >: Redirects standard output to a file, overwriting if it exists
+
+Additional Notes:
+- Most commands can be combined with pipes (|) to create powerful processing pipelines
+- grep uses regular expressions for pattern matching
+- awk is a complete programming language for text processing
+- Output redirection (> and >>) is a fundamental Linux concept
