@@ -29,7 +29,7 @@ define( 'DB_USER', '%%DB_USER%%' );
 define( 'DB_PASSWORD', '%%DB_PASSWORD%%' );
 
 /** Database hostname */
-define( 'DB_PASSWORD', '%%DB_PASSWORD%%' );
+define( 'DB_HOST', '%%DB_HOST%%' );
 
 /** Database charset to use in creating database tables. */
 define( 'DB_CHARSET', 'utf8' );
@@ -100,5 +100,3 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Sets up WordPress vars and included files. */
 require_once ABSPATH . 'wp-settings.php';
-# WordPress CI/CD Test - Sat Aug 23 02:46:20 AM PKT 2025
-# WordPress CI/CD Test-2 - Sat Aug 23 02:55:47 AM PKT 2025
