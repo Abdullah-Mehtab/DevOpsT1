@@ -2,7 +2,7 @@
 
 A complete CI/CD pipeline implementation for hosting multiple web applications on a single Ubuntu server with automated deployment using GitHub Actions.
 
-## 🚀 Applications Hosted
+## 🚀 Applications Hosted (LOCALLY)
 
 - **React App** (`xyz.com/react`) - Modern Vite React application
 - **Python Flask App** (`xyz.com`) - Number guessing game API
